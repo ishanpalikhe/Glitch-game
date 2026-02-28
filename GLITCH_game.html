@@ -65,7 +65,7 @@ body {
 }
 
 #hp-bar {
-  width: 140px;
+  width: 200px;
   height: 12px;
   background: #111;
   border: 1px solid #ff446644;
@@ -300,7 +300,7 @@ body {
         <canvas id="dreamCanvas" width="120" height="160"></canvas>
         <p class="dream-label">— you are dreaming —</p>
         <button id="start-btn">ENTER THE DREAM</button>
-        <p class="menu-hint">A / D Move &nbsp;|&nbsp; W Jump &nbsp;|&nbsp; J K L Attack &nbsp;|&nbsp; E Interact</p>
+        <p class="menu-hint">A / D Move &nbsp;|&nbsp; W Jump &nbsp;|&nbsp; J K L Attack &nbsp;|&nbsp; U Skill &nbsp;|&nbsp; E Interact</p>
       </div>
     </div>
     <div id="transition-overlay"></div>
@@ -2145,15 +2145,59 @@ const ROOMS = {
     enemies: [],
     spawnX: 80, spawnY: 380,
     drawBg(ctx, t) {
+      // Bright daytime sky
       const sky = ctx.createLinearGradient(0,0,0,500);
-      sky.addColorStop(0,'#080e18');
-      sky.addColorStop(1,'#121c30');
+      sky.addColorStop(0,'#4a90c2');
+      sky.addColorStop(0.5,'#87b5d6');
+      sky.addColorStop(1,'#c4dce8');
       ctx.fillStyle = sky;
       ctx.fillRect(0,0,800,500);
 
-      // Ground
-      ctx.fillStyle = '#1a2010';
+      // Animated clouds
+      const cloudPositions = [
+        {x: 100, y: 60, s: 0.8},
+        {x: 350, y: 40, s: 1.2},
+        {x: 600, y: 80, s: 0.6},
+        {x: 750, y: 50, s: 0.9}
+      ];
+      cloudPositions.forEach((cloud, i) => {
+        const cx = ((cloud.x + t * 20 * cloud.s) % 900) - 50;
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cloud.y, 40*cloud.s, 20*cloud.s, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx+25*cloud.s, cloud.y-10, 30*cloud.s, 18*cloud.s, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx-20*cloud.s, cloud.y+5, 25*cloud.s, 15*cloud.s, 0, 0, Math.PI*2);
+        ctx.fill();
+      });
+
+      // Flying birds
+      for (let i = 0; i < 5; i++) {
+        const birdX = (150 + i * 120 + t * 60) % 850;
+        const birdY = 80 + Math.sin(t * 2 + i) * 15;
+        const wingFlap = Math.sin(t * 15 + i * 2) * 0.3;
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(birdX, birdY);
+        ctx.lineTo(birdX - 8, birdY - 5 + wingFlap * 10);
+        ctx.moveTo(birdX, birdY);
+        ctx.lineTo(birdX + 8, birdY - 5 + wingFlap * 10);
+        ctx.stroke();
+      }
+
+      // Ground with grass
+      ctx.fillStyle = '#2d4a20';
       ctx.fillRect(0,460,800,40);
+      // Grass blades
+      for (let i = 0; i < 40; i++) {
+        const gx = i * 20 + Math.sin(i) * 5;
+        ctx.fillStyle = `rgba(50, 90, 40, ${0.5 + Math.sin(t + i) * 0.2})`;
+        ctx.fillRect(gx, 455 + Math.sin(t + i*0.5) * 3, 2, 8);
+      }
 
       // College building
       ctx.fillStyle = '#1a1e2a';
@@ -2167,27 +2211,54 @@ const ROOMS = {
         ctx.fillRect(cx, 130, 20, 330);
       });
 
-      // Windows with subtle glow
+      // Windows - bright and welcoming
       for (let row=0;row<4;row++) for (let col=0;col<5;col++) {
         const wx=190+col*90, wy=160+row*60;
-        const lit=Math.sin(t*0.3+wx*0.05+wy*0.05)>0.2;
-        ctx.fillStyle=lit?'#c8a85044':'#ffffff0a';
+        const lit=Math.sin(t*0.5+wx*0.05+wy*0.05)>0;
+        ctx.fillStyle=lit?'#ffe4a880':'#ffffff20';
         ctx.fillRect(wx,wy,60,40);
-        ctx.strokeStyle='#303848';
-        ctx.lineWidth=1;
+        // Window glow
+        if (lit) {
+          ctx.fillStyle='rgba(255,200,100,0.3)';
+          ctx.fillRect(wx-5,wy-5,70,50);
+        }
+        ctx.strokeStyle='#505868';
+        ctx.lineWidth=2;
         ctx.strokeRect(wx,wy,60,40);
       }
 
-      // Entrance stairs
-      ctx.fillStyle='#222830';
+      // Entrance with bright lights
+      ctx.fillStyle='#3a4050';
       ctx.fillRect(320,420,160,40);
       ctx.fillRect(330,410,140,12);
       ctx.fillRect(340,400,120,12);
+      
+      // Entrance lights
+      const lightGlow = 0.5 + Math.sin(t * 2) * 0.3;
+      ctx.fillStyle = `rgba(255, 220, 150, ${lightGlow})`;
+      ctx.beginPath();
+      ctx.arc(350, 395, 8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(450, 395, 8, 0, Math.PI*2);
+      ctx.fill();
+      
+      // Light glow effect
+      ctx.fillStyle = `rgba(255, 220, 150, ${lightGlow * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(350, 395, 20, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(450, 395, 20, 0, Math.PI*2);
+      ctx.fill();
 
-      // Sign: "COLLEGE"
-      ctx.fillStyle='#334050';
+      // Sign: "COLLEGE" - bright and welcoming
+      ctx.fillStyle='#4a5a70';
       ctx.fillRect(310,110,180,28);
-      ctx.fillStyle='#a0b0c0';
+      ctx.strokeStyle='#6a7a90';
+      ctx.lineWidth=2;
+      ctx.strokeRect(310,110,180,28);
+      ctx.fillStyle='#ffd700';
       ctx.font='bold 14px monospace';
       ctx.textAlign='center';
       ctx.fillText('WESTPORT COLLEGE',400,129);
@@ -2244,7 +2315,11 @@ const ROOMS = {
       { x: 760, y: 400, w: 40, h: 60, to: 'core', toX: 60, toY: 380, label: '→ Core' }
     ],
     npcs: [],
-    enemies: [{ type: 'shadow', x: 400, y: 420 }, { type: 'shadow', x: 650, y: 260 }],
+    enemies: [
+      { type: 'shadow', x: 400, y: 420 },
+      { type: 'shadow', x: 650, y: 260 },
+      { type: 'shadow', x: 200, y: 340 }
+    ],
     spawnX: 80, spawnY: 380,
     drawBg(ctx, t) {
       // Use pixelated scary/bright background if available
@@ -2300,6 +2375,7 @@ const PlayerState = Object.freeze({
   ATTACK1: 'attack1',
   ATTACK2: 'attack2',
   ATTACK3: 'attack3',
+  SKILL:   'skill',
   HURT:    'hurt',
   DEAD:    'dead',
 });
@@ -2331,6 +2407,15 @@ class Player {
     this.attackDmg  = { attack1: 12,   attack2: 18,  attack3: 30  };
     this.attackHit  = { attack1: false, attack2: false, attack3: false };
     this.attackRange = 60;
+
+    // Skill - Energy Wave
+    this.skillActive = false;
+    this.skillCooldown = 0;
+    this.skillMaxCooldown = 5; // 5 seconds cooldown
+    this.skillDuration = 0.4;
+    this.skillTimer = 0;
+    this.skillDmg = 50;
+    this.skillRange = 150;
 
     // Combo
     this.comboSeq   = [];
@@ -2385,6 +2470,7 @@ class Player {
       if (keys['j']) this._startAttack('attack1');
       else if (keys['k']) this._startAttack('attack2');
       else if (keys['l']) this._startAttack('attack3');
+      else if (keys['u'] && this.skillCooldown <= 0) this._activateSkill();
     }
   }
 
@@ -2419,6 +2505,16 @@ class Player {
     }
   }
 
+  _activateSkill() {
+    // Energy Wave skill
+    this._setState(PlayerState.SKILL);
+    this.skillActive = true;
+    this.skillTimer = this.skillDuration;
+    this.skillCooldown = this.skillMaxCooldown;
+    this.comboDisplay = '💥 ENERGY WAVE!';
+    this.comboDisplayTimer = 1.5;
+  }
+
   // ── Physics ────────────────────────────────────────────
   update(dt, platforms) {
     if (this.isDead()) return;
@@ -2429,6 +2525,15 @@ class Player {
     this.invTime     = Math.max(0, this.invTime - dt);
     this.comboTimer  = Math.max(0, this.comboTimer - dt);
     this.comboDisplayTimer = Math.max(0, this.comboDisplayTimer - dt);
+    
+    // Skill cooldown and timer
+    this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    if (this.skillActive) {
+      this.skillTimer -= dt;
+      if (this.skillTimer <= 0) {
+        this.skillActive = false;
+      }
+    }
 
     if (this.comboTimer <= 0) this.comboSeq = [];
 
@@ -2491,7 +2596,8 @@ class Player {
   _isAttacking() {
     return this.state === PlayerState.ATTACK1 ||
            this.state === PlayerState.ATTACK2 ||
-           this.state === PlayerState.ATTACK3;
+           this.state === PlayerState.ATTACK3 ||
+           this.state === PlayerState.SKILL;
   }
 
   isDead() { return this.state === PlayerState.DEAD; }
@@ -2500,6 +2606,19 @@ class Player {
   getAttackBox() {
     if (!this._isAttacking()) return null;
     const atk = this.state;
+    
+    // Handle skill - energy wave
+    if (atk === 'skill') {
+      return {
+        x: this.dir === 1 ? this.x + this.w : this.x - this.skillRange,
+        y: this.y - 20,
+        w: this.skillRange,
+        h: this.h + 40,
+        dmg: this.skillDmg,
+        id: 'skill',
+      };
+    }
+    
     const reach = atk === 'attack3' ? 80 : this.attackRange;
     return {
       x: this.dir === 1 ? this.x + this.w : this.x - reach,
@@ -2642,6 +2761,53 @@ class Player {
     }
 
     ctx.restore();
+
+    // Energy Wave skill visualization
+    if (this.skillActive) {
+      const waveProgress = 1 - (this.skillTimer / this.skillDuration);
+      const waveX = this.dir === 1 ? this.x + this.w : this.x - this.skillRange;
+      
+      // Draw energy wave
+      ctx.save();
+      ctx.globalAlpha = 0.8 - waveProgress * 0.6;
+      
+      // Main energy wave
+      const gradient = ctx.createLinearGradient(
+        this.dir === 1 ? this.x + this.w : this.x - this.skillRange,
+        this.y,
+        this.dir === 1 ? this.x + this.w + this.skillRange : this.x - this.skillRange,
+        this.y + this.h
+      );
+      gradient.addColorStop(0, 'rgba(0, 255, 255, 0)');
+      gradient.addColorStop(0.3, 'rgba(0, 255, 255, 0.8)');
+      gradient.addColorStop(0.5, 'rgba(255, 100, 255, 1)');
+      gradient.addColorStop(0.7, 'rgba(0, 255, 255, 0.8)');
+      gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(
+        this.dir === 1 ? this.x + this.w : this.x - this.skillRange,
+        this.y - 20,
+        this.skillRange,
+        this.h + 40
+      );
+      
+      // Energy particles
+      for (let i = 0; i < 8; i++) {
+        const px = this.dir === 1 
+          ? this.x + this.w + (this.skillRange * (i / 8)) 
+          : this.x - this.skillRange + (this.skillRange * (1 - i / 8));
+        const py = this.y + this.h/2 + Math.sin(waveProgress * Math.PI * 2 + i) * 30;
+        const size = 4 + Math.sin(waveProgress * Math.PI * 4 + i) * 3;
+        
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(0, 255, 255, 0.9)' : 'rgba(255, 100, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
 
     // Combo display
     if (this.comboDisplayTimer > 0) {
@@ -2790,13 +2956,13 @@ class Enemy {
     this.gravity = 900;
     this.onGround = false;
 
-    this.hp    = 60;
-    this.maxHp = 60;
-    this.speed = 80;
-    this.aggroRadius = 200;
-    this.attackRadius = 50;
-    this.attackDmg  = 15;
-    this.attackCd   = 0;
+    this.hp    = 40;
+    this.maxHp = 40;
+    this.speed = 130;
+    this.aggroRadius = 300;
+    this.attackRadius = 60;
+    this.attackDmg  = 25;
+    this.attackCd   = 0.7;
 
     this.state      = EnemyAIState.PATROL;
     this.stateTimer = 0;
@@ -2887,8 +3053,9 @@ class Enemy {
         break;
     }
 
-    // Trail
+    // Trail - spawn more particles for intensity
     this.trail.push({ x: this.x + this.w/2, y: this.y + this.h/2, life: 0.3 });
+    this.trail.push({ x: this.x + this.w/2 + (Math.random()-0.5)*10, y: this.y + this.h/2 + (Math.random()-0.5)*10, life: 0.25 });
     this.trail = this.trail.filter(p => {
       p.life -= dt;
       return p.life > 0;
@@ -2914,8 +3081,20 @@ class Enemy {
   _doAttack(player) {
     this.state = EnemyAIState.ATTACK;
     this.stateTimer = 0;
-    this.attackCd = 1.2;
+    this.attackCd = 0.7;
+    
+    // Charge attack - lunge toward player
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // Apply heavy knockback and damage
     const knockDir = player.x > this.x ? 1 : -1;
+    
+    // Lunge attack - faster and more damaging
+    this.vx = knockDir * 300;
+    this.vy = -120;
+    
     player.takeDamage(this.attackDmg, knockDir);
   }
 
@@ -2953,11 +3132,11 @@ class Enemy {
     const glow = 0.5 + 0.5 * Math.sin(t * 3 + this.glowPhase);
     const isAggro = this.state === EnemyAIState.AGGRO || this.state === EnemyAIState.ATTACK;
 
-    // Trail
+    // Trail - more intense particles
     this.trail.forEach((p, i) => {
-      const a = (p.life / 0.3) * 0.3;
+      const a = (p.life / 0.3) * 0.4;
       ctx.fillStyle = isAggro ? `rgba(255,50,100,${a})` : `rgba(0,200,100,${a})`;
-      const s = 6 * a;
+      const s = 8 * a;
       ctx.fillRect(p.x - s/2, p.y - s/2, s, s);
     });
 
@@ -2978,11 +3157,11 @@ class Enemy {
     ctx.ellipse(this.w/2, this.h + 2, this.w/2, 5, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // Outer glow aura
-    const auraColor = isAggro ? `rgba(255,50,80,${glow*0.25})` : `rgba(0,255,100,${glow*0.15})`;
+    // Outer glow aura - more intense when angry
+    const auraColor = isAggro ? `rgba(255,50,80,${glow*0.5})` : `rgba(0,255,100,${glow*0.15})`;
     ctx.fillStyle = auraColor;
     ctx.beginPath();
-    ctx.ellipse(this.w/2, this.h/2 + bob, this.w/2+12, this.h/2+12, 0, 0, Math.PI*2);
+    ctx.ellipse(this.w/2, this.h/2 + bob, this.w/2+20, this.h/2+20, 0, 0, Math.PI*2);
     ctx.fill();
 
     // Body – dark silhouette, slightly translucent
@@ -2999,44 +3178,55 @@ class Enemy {
     ctx.closePath();
     ctx.fill();
 
-    // Tendrils at bottom
+    // Tendrils at bottom - more aggressive movement
     [4, 10, 18, 26, 32].forEach((tx, i) => {
-      const ht = 6 + Math.sin(t*3+i)*5;
-      const ta = 0.4 + Math.sin(t*2+i*0.5)*0.3;
+      const ht = 8 + Math.sin(t*5+i)*7;
+      const ta = 0.5 + Math.sin(t*3+i*0.5)*0.4;
       ctx.fillStyle = `rgba(10,5,20,${ta})`;
       ctx.fillRect(tx, 48+bob, 4, ht);
     });
 
-    // Eyes
-    const eyeR = isAggro ? '#ff3040' : '#00ff80';
-    const eyeGlow = isAggro ? `rgba(255,0,50,${glow*0.8})` : `rgba(0,255,100,${glow*0.8})`;
+    // Eyes - more menacing when angry
+    const eyeR = isAggro ? '#ff1020' : '#00ff80';
+    const eyeGlow = isAggro ? `rgba(255,0,30,${glow})` : `rgba(0,255,100,${glow*0.8})`;
 
-    // Left eye
-    const eyeSize = isAggro ? 6 : 4;
+    // Left eye - bigger when angry
+    const eyeSize = isAggro ? 8 : 4;
     ctx.fillStyle = eyeGlow;
-    ctx.beginPath(); ctx.arc(10, 16+bob, eyeSize+2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(10, 16+bob, eyeSize+3, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = eyeR;
     ctx.beginPath(); ctx.arc(10, 16+bob, eyeSize, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(11, 15+bob, 2, 0, Math.PI*2); ctx.fill();
 
-    // Right eye
+    // Right eye - bigger when angry
     ctx.fillStyle = eyeGlow;
-    ctx.beginPath(); ctx.arc(26, 16+bob, eyeSize+2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(26, 16+bob, eyeSize+3, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = eyeR;
     ctx.beginPath(); ctx.arc(26, 16+bob, eyeSize, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.beginPath(); ctx.arc(27, 15+bob, 2, 0, Math.PI*2); ctx.fill();
 
-    // Attack slash
+    // Attack slash - more intense and dramatic
     if (this.state === EnemyAIState.ATTACK) {
-      ctx.strokeStyle = `rgba(255,50,80,0.8)`;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = `rgba(255,50,80,0.9)`;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(32, 20+bob);
-      ctx.lineTo(50, 30+bob);
-      ctx.moveTo(32, 28+bob);
-      ctx.lineTo(52, 22+bob);
+      // Main slash
+      ctx.moveTo(32, 15+bob);
+      ctx.lineTo(55, 25+bob);
+      ctx.moveTo(32, 25+bob);
+      ctx.lineTo(58, 18+bob);
+      ctx.moveTo(32, 35+bob);
+      ctx.lineTo(52, 32+bob);
+      ctx.stroke();
+      
+      // Extra intense glow
+      ctx.strokeStyle = `rgba(255,100,150,0.5)`;
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(30, 20+bob);
+      ctx.lineTo(60, 25+bob);
       ctx.stroke();
     }
 
@@ -3538,6 +3728,12 @@ class Game {
     const sx = spawnX !== undefined ? spawnX : data.spawnX;
     const sy = spawnY !== undefined ? spawnY : data.spawnY;
     this.player = new Player(sx, sy - 48);
+
+    // Give extra health when entering beneath world
+    if (roomId === 'beneath') {
+      this.player.maxHp = 150;
+      this.player.hp = 150;
+    }
 
     // Enemies
     this.enemies = (data.enemies || []).map(ed => {
