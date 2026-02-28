@@ -1627,6 +1627,36 @@ class AudioManager {
     this._lfo(0.04, 30, this.ctx.createOscillator().frequency); // harmless
   }
 
+  _buildHouse() {
+    // Peaceful, cozy house interior - warm and homely
+    const rev = this._makeReverb(2, 0.4);
+    rev.connect(this.masterGain);
+
+    // Warm, gentle piano chords (C major feel)
+    const houseNotes = [130.81, 164.81, 196.00, 261.63]; // C3, E3, G3, C4
+    houseNotes.forEach((f, i) => {
+      const { osc, gain } = this._osc('sine', f, 0.08, rev);
+      // Very gentle breathing
+      this._lfo(0.2 + i * 0.1, 0.02, gain.gain);
+    });
+
+    // Soft pad layer
+    const lpf = this._filter('lowpass', 600, 0.5);
+    lpf.connect(this.masterGain);
+    this._osc('triangle', 82.41, 0.06, lpf); // E2
+    this._osc('sine', 98.00, 0.05, lpf);     // G2
+
+    // Subtle ticking clock-like rhythm
+    const hpf = this._filter('highpass', 1000, 1);
+    hpf.connect(this.masterGain);
+    this._lfo(1, 0.01, this.ctx.createGain().gain);
+
+    // Very quiet ambient noise (like a quiet house)
+    const nf = this._filter('lowpass', 200, 3);
+    nf.connect(this.masterGain);
+    this._noise(0.005, nf);
+  }
+
   _buildSurface() {
     // Warm town ambience, slightly off-key
     const lpf = this._filter('lowpass', 1200, 0.5);
@@ -1647,6 +1677,31 @@ class AudioManager {
     const hpf = this._filter('highpass', 1800, 2);
     hpf.connect(this.masterGain);
     this._noise(0.008, hpf);
+  }
+
+  _buildTown() {
+    // Peaceful town path - gentle, outdoor atmosphere
+    const rev = this._makeReverb(2, 0.35);
+    rev.connect(this.masterGain);
+
+    // Gentle ambient pads (G major feel - peaceful)
+    const townNotes = [196.00, 246.94, 293.66, 392.00]; // G3, B3, D4, G4
+    townNotes.forEach((f, i) => {
+      const { osc, gain } = this._osc('sine', f, 0.06, rev);
+      this._lfo(0.25 + i * 0.08, 0.015, gain.gain);
+    });
+
+    // Wind-like filtered noise
+    const wnf = this._filter('bandpass', 400, 0.5);
+    wnf.connect(this.masterGain);
+    this._noise(0.02, wnf);
+    this._lfo(0.15, 100, wnf.frequency); // wind-like movement
+
+    // Subtle cheerful high harmonics
+    const hpf = this._filter('highpass', 2000, 1);
+    hpf.connect(this.masterGain);
+    this._osc('triangle', 523.25, 0.015, hpf); // C5
+    this._noise(0.005, hpf); // ambient high freq
   }
 
   _buildBeneath() {
@@ -1694,21 +1749,48 @@ class AudioManager {
   }
 
   _buildCore() {
-    // Pulsing synth + echoing atmosphere
-    const rev = this._makeReverb(4, 0.7);
+    // Glitchy, distorted core system - digital corruption
+    const rev = this._makeReverb(3, 0.6);
     rev.connect(this.masterGain);
 
-    const { osc: o1, gain: g1 } = this._osc('sine', 110, 0.2, rev);
-    this._lfo(0.5, 0.1, g1.gain);   // pulse
+    // Heavy distortion for glitchy sound
+    const dist = this.ctx.createWaveShaper();
+    dist.curve = this._distCurve(120);
+    dist.oversample = '4x';
+    const distGain = this.ctx.createGain();
+    distGain.gain.value = 0.25;
+    dist.connect(distGain);
+    distGain.connect(this.masterGain);
 
-    this._osc('sine', 220, 0.08, rev);
-    this._osc('triangle', 165, 0.06, rev);
+    // Base drone - distorted
+    this._osc('sawtooth', 55, 0.12, dist);
+    this._osc('square', 41.2, 0.08, dist);
 
-    // Sub drone
-    const lpf = this._filter('lowpass', 300, 2);
+    // Pulsing synth with glitch
+    const { osc: o1, gain: g1 } = this._osc('sine', 110, 0.15, rev);
+    this._lfo(0.5, 0.12, g1.gain);   // pulse
+    this._lfo(3, 20, o1.frequency);  // glitchy frequency wobble
+
+    // High pitched glitchy beeps
+    const hpf = this._filter('highpass', 1500, 2);
+    hpf.connect(this.masterGain);
+    const { osc: o2, gain: g2 } = this._osc('square', 880, 0.03, hpf);
+    this._lfo(8, 50, o2.frequency);  // fast glitch frequency
+    this._lfo(2, 0.02, g2.gain);      // stutter
+
+    // Additional glitch oscillator
+    const { osc: o3 } = this._osc('triangle', 220, 0.04, hpf);
+    this._lfo(5, 30, o3.frequency);
+
+    // Digital noise bursts
+    const bnf = this._filter('bandpass', 1200, 4);
+    bnf.connect(this.masterGain);
+    this._noise(0.03, bnf);
+
+    // Low rumble
+    const lpf = this._filter('lowpass', 200, 1);
     lpf.connect(this.masterGain);
-    this._osc('sine', 55, 0.18, lpf);
-    this._lfo(0.25, 0.08, g1.gain);
+    this._osc('sine', 30, 0.15, lpf);
   }
 
   _buildEnding() {
@@ -1762,6 +1844,8 @@ class AudioManager {
       switch (theme) {
         case 'menu':         this._buildMenu();         break;
         case 'bedroom':      this._buildBedroom();      break;
+        case 'house':        this._buildHouse();        break;
+        case 'town':         this._buildTown();         break;
         case 'surface':      this._buildSurface();      break;
         case 'beneath':      this._buildBeneath();      break;
         case 'beneathAggro': this._buildBeneathAggro(); break;
@@ -1978,7 +2062,7 @@ const ROOMS = {
   house: {
     id: 'house',
     label: 'Home — Interior',
-    music: 'surface',
+    music: 'house',
     bg: '#0f1a1a',
     platforms: [
       { x: 0,   y: 460, w: 800, h: 40 },
@@ -2009,7 +2093,7 @@ const ROOMS = {
   town: {
     id: 'town',
     label: 'Town Path',
-    music: 'surface',
+    music: 'town',
     bg: '#1a1a2e',
     platforms: [
       { x: 0,   y: 460, w: 800, h: 40 },
